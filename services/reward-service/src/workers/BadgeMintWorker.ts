@@ -36,7 +36,7 @@ export class BadgeMintWorker {
 
     const walletClient = createWalletClient({
       account,
-      chain,
+      chain: polygon,
       transport: http(process.env.RPC_URL),
     });
 
@@ -49,13 +49,13 @@ export class BadgeMintWorker {
       "rewards",
       async (job: Job) => {
         if (job.name === "check-badges") {
-          await this.processBadgeCheck(job.data, walletClient, badgeAbi, chain);
+          await this.processBadgeCheck(job.data, walletClient, badgeAbi, polygon);
         } else if (job.name === "on-chain-reward") {
           await this.processOnChainReward(job.data);
         }
       },
       {
-        connection: redis,
+        connection: redis as any,
         concurrency: 3,
         limiter: { max: 10, duration: 1000 }, // 10 jobs/sec max
       }
@@ -74,7 +74,7 @@ export class BadgeMintWorker {
 
   private async processBadgeCheck(
     data: { userId: string; newXP: number; newLevel: number },
-    walletClient: ReturnType<typeof createWalletClient>,
+    walletClient: any,
     badgeAbi: readonly unknown[],
     chain: typeof polygon
   ) {

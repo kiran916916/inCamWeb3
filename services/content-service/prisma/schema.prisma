@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  VIEWER
+  CREATOR
+  MODERATOR
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  // Wallet addresses are PII — stored as-is but treated with GDPR care
+  walletAddress String   @unique @map("wallet_address")
+  username      String?  @unique
+  email         String?  @unique
+  role          Role     @default(VIEWER)
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  streak        Int      @default(0)
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Optional TOTP secret (encrypted at rest)
+  totpSecret    String?  @map("totp_secret")
+  totpEnabled   Boolean  @default(false) @map("totp_enabled")
+
+  refreshTokens RefreshToken[]
+  content       Content[]
+  userQuests    UserQuest[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique @map("token_hash")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  creatorId   String   @map("creator_id")
+  creator     User     @relation(fields: [creatorId], references: [id])
+  title       String
+  description String?
+  type        String   // video, image, audio, text
+  tier        String   // freemium, premium
+  accessMode  String?  @map("access_mode") // token_gated, subscription, pay_per_view
+  ipfsCid     String?  @map("ipfs_cid")
+  thumbnailCid String? @map("thumbnail_cid")
+  price       String?  // BigInt as string for precision
+  nftContract String?  @map("nft_contract")
+  nftTokenId  String?  @map("nft_token_id")
+  status      String   @default("draft") // draft, processing, published, flagged, removed
+  viewCount   Int      @default(0) @map("view_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("content")
+}
+
+model Quest {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  xpReward    Int      @map("xp_reward")
+  tokenReward String   @default("0") @map("token_reward") // BigInt as string
+  conditions  Json
+  questType   String   @map("quest_type") // daily, weekly, seasonal
+  startAt     DateTime @map("start_at")
+  endAt       DateTime @map("end_at")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  userQuests  UserQuest[]
+
+  @@map("quests")
+}
+
+model UserQuest {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questId     String   @map("quest_id")
+  quest       Quest    @relation(fields: [questId], references: [id])
+  completedAt DateTime? @map("completed_at")
+  claimedAt   DateTime? @map("claimed_at")
+  // date_bucket prevents double-claiming across days (e.g. "2024-01-15")
+  dateBucket  String   @map("date_bucket")
+  progress    Int      @default(0)
+
+  @@unique([userId, questId, dateBucket])
+  @@map("user_quests")
+}
