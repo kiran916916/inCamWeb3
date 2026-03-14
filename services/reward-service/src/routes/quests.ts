@@ -17,10 +17,10 @@ export async function questRoutes(app: FastifyInstance) {
   });
 
   // GET /api/quests/user/:userId — get quests with user progress
-  app.get(
+  app.get<{ Params: { userId: string } }>(
     "/user/:userId",
     { preHandler: [app.authenticate] },
-    async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
+    async (request, reply) => {
       const { userId } = request.params;
       const dateBucket = new Date().toISOString().slice(0, 10);
       const now = new Date();

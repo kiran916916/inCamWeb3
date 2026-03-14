@@ -2,15 +2,18 @@ FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies only when needed
+# Install production dependencies
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
+# Build stage — install all deps (including devDependencies for tsc)
 FROM base AS build
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
+# Generate Prisma client if schema exists
+RUN if [ -d prisma ]; then npx prisma generate; fi
 RUN npm run build
 
 # Production image — minimal attack surface
@@ -21,13 +24,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./
 
-# Copy Prisma schema for migrations
-COPY prisma ./prisma
-RUN npx prisma generate
+# Copy Prisma schema + generated client if present
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 
 USER serviceuser
 
 ENV NODE_ENV=production
-EXPOSE 3000
+ARG PORT=3000
+EXPOSE ${PORT}
 
 CMD ["node", "dist/index.js"]

@@ -26,7 +26,7 @@ jobs:
       - name: Configure Kubernetes context
         run: |
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > /tmp/kubeconfig
-          export KUBECONFIG=/tmp/kubeconfig
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
       - name: Deploy to Kubernetes
         env:
@@ -59,4 +59,7 @@ jobs:
       - name: Rollback on failure
         if: failure()
         run: |
-          kubectl rollout undo deployment -n incam-${{ inputs.environment }}
+          kubectl rollout undo deployment/auth-service -n incam-${{ inputs.environment }}
+          kubectl rollout undo deployment/content-service -n incam-${{ inputs.environment }}
+          kubectl rollout undo deployment/reward-service -n incam-${{ inputs.environment }}
+          kubectl rollout undo deployment/frontend -n incam-${{ inputs.environment }}

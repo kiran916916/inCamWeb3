@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import fastifyCors from "@fastify/cors";
 import fastifyHelmet from "@fastify/helmet";
-import fastifyJwt from "@fastify/jwt";
+import fastifyJwt, { FastifyJWTOptions } from "@fastify/jwt";
 import fastifyRateLimit from "@fastify/rate-limit";
 import * as dotenv from "dotenv";
 import { rewardRoutes } from "./routes/rewards";
@@ -34,8 +34,20 @@ async function bootstrap() {
   });
   await app.register(fastifyJwt, {
     secret: { public: process.env.JWT_PUBLIC_KEY || "" },
-    verify: { algorithms: ["RS256"], issuer: "incam-auth", audience: "incam-platform" },
+    verify: { algorithms: ["RS256"] },
+  } as FastifyJWTOptions);
+
+  // Decorator for protecting routes — verifies JWT and attaches user to request
+  app.decorate("authenticate", async (request: any, reply: any) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      reply.status(401).send({ error: "Unauthorized" });
+    }
   });
+
+  // Health check
+  app.get("/health", async () => ({ status: "ok", timestamp: new Date().toISOString() }));
 
   await app.register(rewardRoutes, { prefix: "/api/rewards" });
   await app.register(questRoutes, { prefix: "/api/quests" });

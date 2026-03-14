@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.ipfs.io" },
@@ -35,7 +35,11 @@ const nextConfig: NextConfig = {
   ],
   webpack: (config) => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
-    config.externals.push("pino-pretty", "lokijs", "encoding");
+    if (Array.isArray(config.externals)) {
+      config.externals.push("pino-pretty", "lokijs", "encoding");
+    } else {
+      config.externals = [config.externals, "pino-pretty", "lokijs", "encoding"].filter(Boolean);
+    }
     return config;
   },
 };
