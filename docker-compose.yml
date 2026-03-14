@@ -1,0 +1,162 @@
+version: "3.9"
+
+services:
+  # ─── Infrastructure ────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: incam_postgres
+    environment:
+      POSTGRES_DB: incam_platform
+      POSTGRES_USER: incam
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incam -d incam_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - incam_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: incam_redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-change-me} --save 900 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-change-me}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - incam_net
+
+  # Local Hardhat node for development
+  hardhat-node:
+    image: node:20-alpine
+    container_name: incam_hardhat
+    working_dir: /app/contracts
+    command: npx hardhat node
+    volumes:
+      - ./contracts:/app/contracts
+      - /app/contracts/node_modules
+    ports:
+      - "8545:8545"
+    profiles:
+      - dev
+    networks:
+      - incam_net
+
+  # ─── Application Services ──────────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: ../../infrastructure/docker/service.Dockerfile
+    container_name: incam_auth
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      DATABASE_URL: postgresql://incam:${POSTGRES_PASSWORD:-change-me}@postgres:5432/incam_platform
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - "3001:3001"
+    networks:
+      - incam_net
+    restart: unless-stopped
+
+  content-service:
+    build:
+      context: ./services/content-service
+      dockerfile: ../../infrastructure/docker/service.Dockerfile
+    container_name: incam_content
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3002
+      DATABASE_URL: postgresql://incam:${POSTGRES_PASSWORD:-change-me}@postgres:5432/incam_platform
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET}
+      RPC_URL: ${RPC_URL}
+      CHAIN_ID: ${CHAIN_ID:-80002}
+      CREATOR_PASS_CONTRACT: ${CREATOR_PASS_CONTRACT}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - "3002:3002"
+    networks:
+      - incam_net
+    restart: unless-stopped
+
+  reward-service:
+    build:
+      context: ./services/reward-service
+      dockerfile: ../../infrastructure/docker/service.Dockerfile
+    container_name: incam_rewards
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3004
+      DATABASE_URL: postgresql://incam:${POSTGRES_PASSWORD:-change-me}@postgres:5432/incam_platform
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-me}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      RPC_URL: ${RPC_URL}
+      CHAIN_ID: ${CHAIN_ID:-80002}
+      BADGE_NFT_CONTRACT: ${BADGE_NFT_CONTRACT}
+      REWARD_DISTRIBUTOR_CONTRACT: ${REWARD_DISTRIBUTOR_CONTRACT}
+      MINTER_PRIVATE_KEY: ${MINTER_PRIVATE_KEY}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - "3004:3004"
+    networks:
+      - incam_net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../infrastructure/docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+        NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID}
+        NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-80002}
+    container_name: incam_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - incam_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  incam_net:
+    driver: bridge

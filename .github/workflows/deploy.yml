@@ -1,0 +1,62 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [staging, production]
+      image_tag:
+        description: "Docker image tag (git SHA)"
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure Kubernetes context
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+
+      - name: Deploy to Kubernetes
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          NAMESPACE: incam-${{ inputs.environment }}
+        run: |
+          kubectl set image deployment/auth-service \
+            auth-service=ghcr.io/${{ github.repository }}/auth-service:${IMAGE_TAG} \
+            -n ${NAMESPACE}
+          kubectl set image deployment/content-service \
+            content-service=ghcr.io/${{ github.repository }}/content-service:${IMAGE_TAG} \
+            -n ${NAMESPACE}
+          kubectl set image deployment/reward-service \
+            reward-service=ghcr.io/${{ github.repository }}/reward-service:${IMAGE_TAG} \
+            -n ${NAMESPACE}
+          kubectl set image deployment/frontend \
+            frontend=ghcr.io/${{ github.repository }}/frontend:${IMAGE_TAG} \
+            -n ${NAMESPACE}
+          kubectl rollout status deployment -n ${NAMESPACE} --timeout=300s
+
+      - name: Run smoke tests
+        run: |
+          sleep 15
+          curl -f https://${{ vars.API_DOMAIN }}/health || exit 1
+
+      - name: Notify on success
+        if: success()
+        run: echo "Deployment to ${{ inputs.environment }} successful"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment -n incam-${{ inputs.environment }}

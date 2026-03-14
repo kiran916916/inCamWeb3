@@ -1,0 +1,10 @@
+{
+  "detectors_to_exclude": "timestamp",
+  "exclude_informational": false,
+  "exclude_low": false,
+  "exclude_medium": false,
+  "filter_paths": "contracts/test,node_modules",
+  "solc_remaps": [
+    "@openzeppelin/=node_modules/@openzeppelin/"
+  ]
+}
