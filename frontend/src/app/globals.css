@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0A0A0F;
+    --bg-secondary: #13131A;
+    --bg-surface: #1C1C28;
+    --accent-primary: #7C3AED;
+    --accent-secondary: #06D6A0;
+    --text-primary: #F8F8FF;
+    --text-secondary: #9594A8;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-syne), sans-serif;
+  }
+
+  code, pre, .mono {
+    font-family: var(--font-jetbrains), monospace;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #7C3AED60;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent-primary text-white font-semibold text-sm
+           transition-all duration-200 hover:scale-105 hover:shadow-[0_0_20px_#7C3AED60]
+           active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-accent-primary/30
+           text-accent-primary font-semibold text-sm bg-accent-primary/10
+           transition-all duration-200 hover:bg-accent-primary/20 hover:border-accent-primary/60
+           active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-text-secondary
+           font-medium text-sm transition-all duration-200 hover:text-text-primary hover:bg-bg-surface
+           active:scale-95;
+  }
+
+  .card {
+    @apply bg-bg-surface border border-white/5 rounded-2xl overflow-hidden;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300 hover:border-accent-primary/30 hover:shadow-[0_0_30px_#7C3AED20];
+  }
+
+  .nft-card {
+    @apply card-hover cursor-pointer group;
+  }
+
+  .nft-card:hover .nft-card-image {
+    @apply scale-105;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl bg-bg-secondary border border-white/10 text-text-primary
+           placeholder-text-secondary/50 focus:outline-none focus:border-accent-primary/50
+           focus:ring-1 focus:ring-accent-primary/30 transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-premium {
+    @apply badge bg-accent-primary/20 text-accent-primary border border-accent-primary/30;
+  }
+
+  .badge-free {
+    @apply badge bg-white/10 text-text-secondary border border-white/10;
+  }
+
+  .badge-verified {
+    @apply badge bg-accent-secondary/20 text-accent-secondary;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent;
+  }
+
+  .section-header {
+    @apply font-display text-3xl font-bold text-text-primary;
+  }
+
+  .glass {
+    @apply bg-bg-surface/80 backdrop-blur-xl border border-white/10;
+  }
+
+  /* NFT card flip effect */
+  .nft-flip-container {
+    perspective: 1000px;
+  }
+
+  .nft-flip-card {
+    transition: transform 0.6s ease;
+    transform-style: preserve-3d;
+    position: relative;
+  }
+
+  .nft-flip-container:hover .nft-flip-card {
+    transform: rotateY(180deg);
+  }
+
+  .nft-flip-front,
+  .nft-flip-back {
+    backface-visibility: hidden;
+    position: absolute;
+    inset: 0;
+  }
+
+  .nft-flip-back {
+    transform: rotateY(180deg);
+  }
+}
+
+@layer utilities {
+  .wallet-address {
+    @apply font-mono text-sm text-text-secondary;
+  }
+
+  .price-display {
+    @apply font-display font-bold text-text-primary;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px #7C3AED40;
+  }
+
+  .glow-success {
+    box-shadow: 0 0 20px #06D6A040;
+  }
+}

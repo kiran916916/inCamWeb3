@@ -1,0 +1,33 @@
+{
+  "name": "incam-web3-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web3 Social Media & NFT Exchange Platform",
+  "workspaces": [
+    "frontend",
+    "services/*",
+    "contracts"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "contracts:compile": "cd contracts && npx hardhat compile",
+    "contracts:test": "cd contracts && npx hardhat test",
+    "contracts:deploy:local": "cd contracts && npx hardhat run scripts/deploy.ts --network localhost",
+    "contracts:deploy:testnet": "cd contracts && npx hardhat run scripts/deploy.ts --network polygon_amoy",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.2.5",
+    "@types/node": "^20.12.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
