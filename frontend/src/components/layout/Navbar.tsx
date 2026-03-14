@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/rewards", label: "Rewards" },
   { href: "/discover", label: "Discover" },
+  { href: "/interview-prep", label: "Interview Prep" },
 ];
 
 export function Navbar() {
