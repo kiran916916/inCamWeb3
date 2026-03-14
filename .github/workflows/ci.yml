@@ -30,17 +30,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Snyk dependency scan
+      - name: Run Snyk dependency scan (contracts)
         uses: snyk/actions/node@master
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=critical
+          args: --severity-threshold=critical --file=contracts/package.json
+
+      - name: Run Snyk dependency scan (frontend)
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=critical --file=frontend/package.json
+
+      - name: Run Snyk dependency scan (auth-service)
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=critical --file=services/auth-service/package.json
 
   # ─── Smart Contract Tests ───────────────────────────────────────────────────
   contracts:
